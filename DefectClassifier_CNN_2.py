@@ -4,7 +4,6 @@
 Created on Fri Dec  3 09:30:01 2021
 
 @author: arun
-SurveyTek - Without Data Augumentation using image_dataset_from_directory method
 """
 # from IPython.terminal.embed import InteractiveShellEmbed
 # ipshell = InteractiveShellEmbed()
@@ -19,20 +18,20 @@ import tensorflow_addons as tfa
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras import backend as K
-# from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.python.client import device_lib
 import os
 import sys
 import PIL
 from PIL import Image
 import numpy as np
-# os.environ['CUDA_VISIBLE_DEVICES'] = ""
+os.environ['CUDA_VISIBLE_DEVICES'] = ""
 
-print(device_lib.list_local_devices())
+# print(device_lib.list_local_devices())
 
-cfg = tf.compat.v1.ConfigProto() 
-cfg.gpu_options.allow_growth = True
-sess= tf.compat.v1.Session(config=cfg)
+# cfg = tf.compat.v1.ConfigProto() 
+# cfg.gpu_options.allow_growth = True
+# sess= tf.compat.v1.Session(config=cfg)
 #%%
 st_0 = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S') 
 start_time_0=time.time()
@@ -45,45 +44,48 @@ batch_size=32
 trainpath='/home/arun/Documents/PyWSPrecision/datasets/cat_surveytek_1/train'
 validpath='/home/arun/Documents/PyWSPrecision/datasets/cat_surveytek_1/valid'
 
-train_ds=tf.keras.preprocessing.image_dataset_from_directory(
+datagen = ImageDataGenerator(
+        rotation_range=40,
+        width_shift_range=0.2,
+        height_shift_range=0.2,
+        # rescale=1./255,
+        shear_range=0.2,
+        zoom_range=0.2,
+        horizontal_flip=True,
+        fill_mode='nearest')
+
+
+train_ds=datagen.flow_from_directory(
     trainpath,
-    subset="training",
-    validation_split=0.2,
+    # subset="training",
     seed=1337,#transformation seed
     shuffle=True,
     interpolation='nearest',
-    label_mode="categorical",
-    image_size=imgshape,
+    class_mode="categorical",
+    target_size=imgshape,
     batch_size=batch_size)
 
-validation_ds=tf.keras.preprocessing.image_dataset_from_directory(
+validation_ds=datagen.flow_from_directory(
     validpath,
-    subset="validation",
-    validation_split=0.2,
+    # subset="validation",
     seed=1337,#transformation seed
     shuffle=True,
     interpolation='nearest',
-    label_mode="categorical",
-    image_size=imgshape,
+    class_mode="categorical",
+    target_size=imgshape,
     batch_size=batch_size)
 #%%
-class_names=train_ds.class_names
-num_classes=len(class_names)
-
+# class_names=train_ds.class_names
+# num_classes=len(class_names)
+num_classes=4 # Need to find the no. of class from the object
 #%% Configuring dataset for performance
-train_ds = train_ds.prefetch(buffer_size=32)
-validation_ds = validation_ds.prefetch(buffer_size=32)
+# train_ds = train_ds.prefetch(buffer_size=32)
+# validation_ds = validation_ds.prefetch(buffer_size=32)
 # os.system("nvidia-smi")
 # print('After Dataset generator')
 #%% Data Augumentation - Built in the future
 """tf.keras.preprocessing.image.ImageDataGenerator(
-   rotation_range=30, horizontal_flip=True) Does not suit here"""
-# data_augmentation = keras.Sequential(
-#     [
-#         layers.experimental.preprocessing.RandomFlip(mode="HORIZONTAL_AND_VERTICAL"),
-#         layers.experimental.preprocessing.RandomRotation(0.1),
-#     ]
-# )
+   rotation_range=30, horizontal_flip=True)"""
 #%% CNN Models
 
 def make_simple_model(input_shape, num_classes):
@@ -140,7 +142,6 @@ def make_simple_model(input_shape, num_classes):
 
 def make_basic_model(input_shape, num_classes):
     inputs=keras.Input(shape=input_shape)
-    # x = data_augmentation(inputs)
     x = layers.experimental.preprocessing.Rescaling(1.0 / 255)(inputs)
     x =layers.Conv2D(32, kernel_size=(3, 3), activation="relu")(x)
     x =layers.MaxPooling2D(pool_size=(2, 2))(x)
@@ -158,7 +159,7 @@ model = make_simple_model(input_shape, num_classes)
 print('After Model-Built')
 model.summary()
 #%% Training the models
-epochs = 25
+epochs = 1
 
 # callbacks = [
 #     keras.callbacks.ModelCheckpoint("save_at_{epoch}.h5"),
